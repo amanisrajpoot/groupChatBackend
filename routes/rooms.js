@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { rooms, users } = require("../data");
+const { rooms, users, ROLE } = require("../data");
 const { authRole, authUser } = require("../auth");
 const {
   canViewRoom,
@@ -14,7 +14,7 @@ router.get("/", authUser, (req, res) => {
   res.json(rooms);
 });
 
-router.post("/", authUser, authAddRoom, (req, res) => {
+router.post("/", authUser, (req, res) => {
   const { roomName } = req.body;
 
   if (!rooms.some((room) => room.name === roomName)) {
@@ -43,7 +43,7 @@ router.get("/:roomId", authUser, setRoom, (req, res) => {
   }
 });
 
-router.put("/:roomId", authUser, setRoom, authEditRoom, (req, res) => {
+router.put("/:roomId", authUser, setRoom, (req, res) => {
   const roomId = parseInt(req.params.roomId);
   const updatedRoom = req.body;
 
@@ -57,7 +57,7 @@ router.put("/:roomId", authUser, setRoom, authEditRoom, (req, res) => {
   }
 });
 
-router.delete("/:roomId", authUser, setRoom, authDeleteRoom, (req, res) => {
+router.delete("/:roomId", authUser, setRoom, (req, res) => {
   const roomId = parseInt(req.params.roomId);
 
   const roomIndex = rooms.findIndex((room) => room.id === roomId);
@@ -82,6 +82,33 @@ router.get("/:roomId/users", authUser, setRoom, (req, res) => {
   }
 });
 
+router.put(
+  "/:roomId/members/:memberName",
+  authUser,
+  setRoom,
+  authRole(ROLE.ADMIN),
+  (req, res) => {
+    const room = req.room;
+    const oldMemberName = req.params.memberName;
+    const newMemberName = req.body.newMemberName;
+
+    if (room) {
+      const memberIndex = room.members.findIndex(
+        (member) => member === oldMemberName
+      );
+
+      if (memberIndex !== -1) {
+        room.members[memberIndex] = newMemberName;
+        res.json({ message: "Member details updated successfully" });
+      } else {
+        res.status(404).json({ message: "Member not found in the room" });
+      }
+    } else {
+      res.status(404).json({ message: "Room not found" });
+    }
+  }
+);
+
 router.post("/:roomId/users", authUser, setRoom, (req, res) => {
   const roomId = parseInt(req.params.roomId);
   const userId = req.body.userId;
@@ -95,6 +122,23 @@ router.post("/:roomId/users", authUser, setRoom, (req, res) => {
       res.json({ message: "User added to room successfully" });
     } else {
       res.status(404).json({ message: "User not found" });
+    }
+  } else {
+    res.status(404).json({ message: "Room not found" });
+  }
+});
+
+router.get("/:roomId/members/:memberName", authUser, setRoom, (req, res) => {
+  const room = req.room;
+  const memberName = req.params.memberName;
+
+  if (room) {
+    const member = room.members.find((member) => member === memberName);
+
+    if (member) {
+      res.json({ member });
+    } else {
+      res.status(404).json({ message: "Member not found in the room" });
     }
   } else {
     res.status(404).json({ message: "Room not found" });
@@ -148,6 +192,32 @@ router.post("/:roomId/messages", authUser, setRoom, (req, res) => {
     res.status(404).json({ message: "Room not found" });
   }
 });
+
+router.post(
+  "/:roomId/messages/:messageId/like",
+  authUser,
+  setRoom,
+  (req, res) => {
+    const roomId = parseInt(req.params.roomId);
+    const messageId = parseInt(req.params.messageId);
+
+    const room = rooms.find((room) => room.id === roomId);
+
+    if (room) {
+      const message = room.messages.find((message) => message.id === messageId);
+
+      if (message) {
+        message.likes = message.likes || [];
+        message.likes.push(req.user.id);
+        res.json({ message: "Like added successfully" });
+      } else {
+        res.status(404).json({ message: "Message not found" });
+      }
+    } else {
+      res.status(404).json({ message: "Room not found" });
+    }
+  }
+);
 
 function setRoom(req, res, next) {
   const roomId = parseInt(req.params.roomId);

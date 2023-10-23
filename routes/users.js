@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { users } = require("../data");
+const { users, ROLE } = require("../data");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { authRole, authUser } = require("../auth");
 
 let refreshTokens = [];
 
@@ -14,7 +15,7 @@ router.post("/", async (req, res) => {
   try {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(req.body.password, salt);
-    console.log("hashed password", hashedPassword);
+
     const user = {
       id: users.length + 1,
       name: req.body.name,
@@ -28,12 +29,32 @@ router.post("/", async (req, res) => {
       .send(
         user.name.charAt(0).toUpperCase() +
           user.name.slice(1) +
-          ", your account has been created!" +
-          " Your hashed password is " +
-          hashedPassword
+          ", your account has been created!"
       );
   } catch {
     res.status(500).send();
+  }
+});
+
+router.put("/:userId", authUser, async (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const user = users.find((user) => user.id === userId);
+
+  if (user == null) {
+    return res.status(404).send("User not found");
+  }
+
+  try {
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+    user.name = req.body.name;
+    user.password = hashedPassword;
+
+    res.json({ message: "User information updated successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Internal Server Error");
   }
 });
 
