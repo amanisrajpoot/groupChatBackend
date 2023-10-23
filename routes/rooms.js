@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { rooms } = require("../data");
+const { rooms, users } = require("../data");
 const { authRole, authUser } = require("../auth");
 const {
   canViewRoom,
@@ -65,6 +65,57 @@ router.delete("/:roomId", authUser, setRoom, authDeleteRoom, (req, res) => {
   if (roomIndex !== -1) {
     rooms.splice(roomIndex, 1);
     res.json({ message: "Room deleted successfully" });
+  } else {
+    res.status(404).json({ message: "Room not found" });
+  }
+});
+
+router.get("/:roomId/users", authUser, setRoom, (req, res) => {
+  const roomId = parseInt(req.params.roomId);
+
+  const room = rooms.find((room) => room.id === roomId);
+
+  if (room) {
+    res.json(room.members);
+  } else {
+    res.status(404).json({ message: "Room not found" });
+  }
+});
+
+router.post("/:roomId/users", authUser, setRoom, (req, res) => {
+  const roomId = parseInt(req.params.roomId);
+  const userId = req.body.userId;
+
+  const room = rooms.find((room) => room.id === roomId);
+
+  if (room) {
+    const user = users.find((user) => user.id === userId);
+    if (user) {
+      room.members.push(user);
+      res.json({ message: "User added to room successfully" });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } else {
+    res.status(404).json({ message: "Room not found" });
+  }
+});
+
+// Remove user from room
+router.delete("/:roomId/users/:userId", authUser, setRoom, (req, res) => {
+  const roomId = parseInt(req.params.roomId);
+  const userId = parseInt(req.params.userId);
+
+  const room = rooms.find((room) => room.id === roomId);
+
+  if (room) {
+    const userIndex = room.members.findIndex((user) => user.id === userId);
+    if (userIndex !== -1) {
+      room.members.splice(userIndex, 1);
+      res.json({ message: "User removed from room successfully" });
+    } else {
+      res.status(404).json({ message: "User not found in room" });
+    }
   } else {
     res.status(404).json({ message: "Room not found" });
   }
