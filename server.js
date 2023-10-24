@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const app = express();
+const mongoose = require("mongoose");
 const PORT = process.env.PORT || 3000;
 const { users, ROLE, rooms } = require("./data");
 const { authRole, authUser } = require("./auth");
@@ -12,6 +13,11 @@ app.use(express.json());
 app.use(setUser);
 app.use("/users", usersRouter);
 app.use("/rooms", roomsRouter);
+
+mongoose.connect(process.env.DATABASE_URL);
+const db = mongoose.connection;
+db.on("error", (error) => console.error(error));
+db.once("open", () => console.log("connected to database"));
 
 app.get("/", authUser, (req, res) => {
   res.send("Home Page");
