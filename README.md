@@ -8,3 +8,5 @@ ACCESS_TOKEN_SECRET=?
 REFRESH_TOKEN_SECRET=?
 
 PORT=?
+
+DATABASE_URL=mongodb://localhost/chatappdb
