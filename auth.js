@@ -6,8 +6,10 @@ function authUser(req, res, next) {
   if (token == null) return res.sendStatus(401);
 
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    console.log("error", err);
-    if (err) return res.status(403);
+    if (err) {
+      console.error("JWT verification error:", err);
+      return res.sendStatus(403); // Send Forbidden status if token is invalid
+    }
     req.user = user;
     next();
   });

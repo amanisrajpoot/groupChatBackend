@@ -49,3 +49,5 @@ console.log();
 // });
 
 app.listen(PORT);
+
+module.exports = app;

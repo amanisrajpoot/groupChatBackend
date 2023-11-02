@@ -7,12 +7,19 @@ const { authRole, authUser } = require("../auth");
 const Users = require("../models/users");
 const RefreshTokens = require("../models/refreshTokens");
 
-let refreshTokens = [];
-
 router.get("/", async (req, res) => {
   try {
     const users = await Users.find();
     res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/tokens", async (req, res) => {
+  try {
+    const tokens = await RefreshTokens.find();
+    res.json(tokens);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -93,8 +100,22 @@ router.post("/token", (req, res) => {
 router.delete("/logout", async (req, res) => {
   try {
     const token = req.header("Authorization");
-    console.log("Received token:", token);
-    // ...
+    console.log("Extracted token:", token);
+
+    if (!token) {
+      return res.status(401).send("Access Denied");
+    }
+
+    const deletedToken = await RefreshTokens.findOneAndDelete({
+      refreshToken: token.split(" ")[1],
+    });
+    console.log("Extracted token:", token.split(" ")[1]);
+
+    if (!deletedToken) {
+      return res.status(404).send("Token not found");
+    }
+
+    res.sendStatus(204);
   } catch (error) {
     console.error(error);
     res.status(500).send("Internal Server Error");
@@ -124,7 +145,7 @@ router.post("/login", async (req, res) => {
         refreshToken: jwt.sign(user.toJSON(), process.env.REFRESH_TOKEN_SECRET),
       });
       const newRefreshToken = await refreshToken.save();
-      console.log("authorization token", accessToken);
+      console.log("new refresh token", newRefreshToken);
       res.json({
         accessToken: accessToken,
         refreshToken: newRefreshToken.refreshToken,
